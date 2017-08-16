@@ -4,19 +4,29 @@
   hosts: localhost
   gather_facts: False
   vars:
-    keypair: my_keypair
     instance_type: t2.micro
     image: ami-d1315fb1
     region: us-west-1
+
   tasks:
+    - name: Generate key
+      ec2_key:
+         name: ansible_key
+         region: "{{ region }}"
+         aws_access_key: AKIAJEFW2EUQOSAP3QIQ
+         aws_secret_key: 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
+         state: present
+
     - name: Launch instance
       ec2:
-         key_name: "{{ keypair }}"
+         key_name: ansible_key
          group: default
          instance_type: "{{ instance_type }}"
          image: "{{ image }}"
          wait: true
          region: "{{ region }}"
+         aws_access_key: AKIAJEFW2EUQOSAP3QIQ
+         aws_secret_key: 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
       register: ec2
     - name: Print all ec2 variables
       debug: var=ec2
