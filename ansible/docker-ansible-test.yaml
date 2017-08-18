@@ -1,0 +1,63 @@
+- name: Get a Docker image up and running on a new Droplet
+  hosts: localhost
+  remote_user: jeff
+  vars_files:
+    - secret
+  vars:
+    instance_type: t2.micro
+    image: ami-d1315fb1
+    region: us-west-1
+    user_name: jeff
+
+  tasks:
+    - name: Provision instance
+      ec2:
+         key_name: ansible_key
+         group: default
+         instance_type: "{{ instance_type }}"
+         aws_access_key: "{{ec2_access_key}}"
+         aws_secret_key: "{{ec2_secret_key}}"
+         image: "{{ image }}"
+         region: "{{ region }}"
+         wait: true
+         exact_count: 1
+         count_tag:
+            Name: Demo
+         instance_tags:
+            Name: Demo
+      register: ec2
+
+    - name: Add all instance public IPs to host group
+      add_host: hostname={{ item.public_ip }} groups=ec2hosts
+      with_items: "{{ ec2.instances }}"
+
+    - name: Verify the presence of an SSH key
+      debug: { msg: 'SSH key would be verified' }
+
+    - name: Verify that the normal user exists on the instance
+      become: true
+      user:
+        createhome: yes
+        name: '{{ user_name }}'
+
+    - name: Set directory permissions
+      file: 
+        path: /home/jeff/.ssh
+        state: directory
+        owner: jeff
+        mode: 0700
+
+    - name: Set file permissions
+      file:
+        path: /home/jeff/.ssh/authorized_keys
+        state: file
+        owner: jeff
+        mode=: 0600
+
+    - name: Verify that the user's .authorized_keys file exists and is correct
+      authorized_key:
+        exclusive: no
+        key: "{{ lookup('file', 'id_rsa.pub') }}"
+        state: present
+        user: '{{ user_name }}'
+
